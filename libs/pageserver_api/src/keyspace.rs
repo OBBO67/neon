@@ -17,6 +17,45 @@ pub struct KeySpace {
     pub ranges: Vec<Range<Key>>,
 }
 
+pub struct KeySpaceIter<'a> {
+    ranges: &'a [Range<Key>],
+    range_index: usize,
+    current_key: Option<Key>,
+}
+
+impl<'a> Iterator for KeySpaceIter<'a> {
+    type Item = Key;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        loop {
+            match self.current_key {
+                Some(key) => {
+                    let range = &self.ranges[self.range_index];
+
+                    // Check if we are at the last key in this range
+                    if key < range.end {
+                        let next_key = key.next();
+                        if next_key < range.end {
+                            self.current_key = Some(next_key);
+                            return Some(key);
+                        }
+                    }
+
+                    // Move to next range and check if we are at the end
+                    self.range_index += 1;
+
+                    if self.range_index < self.ranges.len() {
+                        self.current_key = Some(self.ranges[self.range_index].start);
+                    } else {
+                        self.current_key = None;
+                    }
+                }
+                None => return None, // no more keys left
+            }
+        }
+    }
+}
+
 impl std::fmt::Display for KeySpace {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "[")?;
